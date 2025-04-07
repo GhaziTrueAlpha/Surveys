@@ -1,4 +1,5 @@
 import { pgTable, text, uuid, timestamp, boolean } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -63,7 +64,7 @@ export const surveys = pgTable("surveys", {
   is_active: boolean("is_active").default(true),
 });
 
-// Survey Responses Table (optional for tracking completions)
+// Survey Responses Table
 export const surveyResponses = pgTable("survey_responses", {
   id: uuid("id").defaultRandom().primaryKey(),
   survey_id: uuid("survey_id").references(() => surveys.id),
@@ -71,6 +72,31 @@ export const surveyResponses = pgTable("survey_responses", {
   completed_at: timestamp("completed_at").defaultNow(),
   reward_earned: text("reward_earned"),
 });
+
+// Define relations after all tables are defined
+export const usersRelations = relations(users, ({ many }) => ({
+  surveys: many(surveys),
+  surveyResponses: many(surveyResponses),
+}));
+
+export const surveysRelations = relations(surveys, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [surveys.created_by],
+    references: [users.id],
+  }),
+  responses: many(surveyResponses),
+}));
+
+export const surveyResponsesRelations = relations(surveyResponses, ({ one }) => ({
+  survey: one(surveys, {
+    fields: [surveyResponses.survey_id],
+    references: [surveys.id],
+  }),
+  vendor: one(users, {
+    fields: [surveyResponses.vendor_id],
+    references: [users.id],
+  }),
+}));
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users, {

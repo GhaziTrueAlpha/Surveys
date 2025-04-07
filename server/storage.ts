@@ -1,4 +1,7 @@
 import { users, surveys, surveyResponses, type User, type InsertUser, type Survey, type InsertSurvey, type SurveyResponse, type InsertSurveyResponse } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, isNull } from "drizzle-orm";
+import bcrypt from "bcrypt";
 
 export interface IStorage {
   // User operations
@@ -19,127 +22,143 @@ export interface IStorage {
   createSurveyResponse(response: InsertSurveyResponse): Promise<SurveyResponse>;
   getSurveyResponsesByVendor(vendorId: string): Promise<SurveyResponse[]>;
   getSurveyResponsesBySurvey(surveyId: string): Promise<SurveyResponse[]>;
+
+  // Initialize default admin
+  initializeAdmin(): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private userStore: Map<string, User>;
-  private surveyStore: Map<string, Survey>;
-  private responseStore: Map<string, SurveyResponse>;
-  private userIdCounter: number;
-  private surveyIdCounter: number;
-  private responseIdCounter: number;
-
-  constructor() {
-    this.userStore = new Map();
-    this.surveyStore = new Map();
-    this.responseStore = new Map();
-    this.userIdCounter = 1;
-    this.surveyIdCounter = 1;
-    this.responseIdCounter = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
+  
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    return this.userStore.get(id);
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.userStore.values()).find(
-      (user) => user.email === email
-    );
+    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result[0];
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    const id = crypto.randomUUID();
-    const created_at = new Date();
-    const newUser: User = { ...user, id, created_at, flag: 'no' };
-    this.userStore.set(id, newUser);
-    return newUser;
+    // Hash the password for security
+    const hashedPassword = await bcrypt.hash(user.password, 10);
+    
+    const newUser = { ...user, password: hashedPassword };
+    const result = await db.insert(users).values(newUser).returning();
+    return result[0];
   }
 
   async updateUser(id: string, data: Partial<User>): Promise<User | undefined> {
-    const user = this.userStore.get(id);
-    if (!user) return undefined;
-    
-    const updatedUser = { ...user, ...data };
-    this.userStore.set(id, updatedUser);
-    return updatedUser;
+    const result = await db.update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+      
+    return result[0];
   }
 
   async getUsers(role?: string, flag?: string): Promise<User[]> {
-    let users = Array.from(this.userStore.values());
-    
-    if (role) {
-      users = users.filter(user => user.role === role);
+    if (role && flag) {
+      return await db.select().from(users)
+        .where(and(eq(users.role, role), eq(users.flag, flag)));
+    } else if (role) {
+      return await db.select().from(users)
+        .where(eq(users.role, role));
+    } else if (flag) {
+      return await db.select().from(users)
+        .where(eq(users.flag, flag));
+    } else {
+      return await db.select().from(users);
     }
-    
-    if (flag) {
-      users = users.filter(user => user.flag === flag);
-    }
-    
-    return users;
   }
 
   // Survey operations
   async getSurvey(id: string): Promise<Survey | undefined> {
-    return this.surveyStore.get(id);
+    const result = await db.select().from(surveys).where(eq(surveys.id, id)).limit(1);
+    return result[0];
   }
 
   async getSurveys(category?: string, createdBy?: string): Promise<Survey[]> {
-    let surveys = Array.from(this.surveyStore.values());
-    
-    if (category) {
-      surveys = surveys.filter(survey => survey.category === category);
+    if (category && createdBy) {
+      return await db.select().from(surveys)
+        .where(and(eq(surveys.category, category), eq(surveys.created_by, createdBy)));
+    } else if (category) {
+      return await db.select().from(surveys)
+        .where(eq(surveys.category, category));
+    } else if (createdBy) {
+      return await db.select().from(surveys)
+        .where(eq(surveys.created_by, createdBy));
+    } else {
+      return await db.select().from(surveys);
     }
-    
-    if (createdBy) {
-      surveys = surveys.filter(survey => survey.created_by === createdBy);
-    }
-    
-    return surveys;
   }
 
   async createSurvey(survey: InsertSurvey): Promise<Survey> {
-    const id = crypto.randomUUID();
-    const created_at = new Date();
-    const newSurvey: Survey = { ...survey, id, created_at, is_active: true };
-    this.surveyStore.set(id, newSurvey);
-    return newSurvey;
+    const result = await db.insert(surveys).values(survey).returning();
+    return result[0];
   }
 
   async updateSurvey(id: string, data: Partial<Survey>): Promise<Survey | undefined> {
-    const survey = this.surveyStore.get(id);
-    if (!survey) return undefined;
-    
-    const updatedSurvey = { ...survey, ...data };
-    this.surveyStore.set(id, updatedSurvey);
-    return updatedSurvey;
+    const result = await db.update(surveys)
+      .set(data)
+      .where(eq(surveys.id, id))
+      .returning();
+      
+    return result[0];
   }
 
   async deleteSurvey(id: string): Promise<boolean> {
-    return this.surveyStore.delete(id);
+    const result = await db.delete(surveys).where(eq(surveys.id, id)).returning();
+    return result.length > 0;
   }
 
   // Survey response operations
   async createSurveyResponse(response: InsertSurveyResponse): Promise<SurveyResponse> {
-    const id = crypto.randomUUID();
-    const completed_at = new Date();
-    const newResponse: SurveyResponse = { ...response, id, completed_at };
-    this.responseStore.set(id, newResponse);
-    return newResponse;
+    const result = await db.insert(surveyResponses).values(response).returning();
+    return result[0];
   }
 
   async getSurveyResponsesByVendor(vendorId: string): Promise<SurveyResponse[]> {
-    return Array.from(this.responseStore.values()).filter(
-      response => response.vendor_id === vendorId
-    );
+    return await db.select()
+      .from(surveyResponses)
+      .where(eq(surveyResponses.vendor_id, vendorId));
   }
 
   async getSurveyResponsesBySurvey(surveyId: string): Promise<SurveyResponse[]> {
-    return Array.from(this.responseStore.values()).filter(
-      response => response.survey_id === surveyId
-    );
+    return await db.select()
+      .from(surveyResponses)
+      .where(eq(surveyResponses.survey_id, surveyId));
+  }
+
+  // Initialize admin user
+  async initializeAdmin(): Promise<void> {
+    // Check if admin exists
+    const adminExists = await db.select().from(users)
+      .where(eq(users.role, 'admin'))
+      .limit(1);
+    
+    if (adminExists.length === 0) {
+      // Create default admin
+      const adminUser: InsertUser = {
+        email: 'admin@example.com',
+        password: 'admin123', // In production, use a strong password
+        role: 'admin',
+        name: 'Admin User',
+        company_name: 'Survey Marketplace',
+        account_email: 'admin@example.com',
+        gst: 'ADMIN-GST',
+        city: 'Admin City',
+        flag: 'yes' // Admin is pre-approved
+      };
+      
+      await this.createUser(adminUser);
+      console.log('Default admin user created');
+    }
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
+
+// Initialize admin user on startup
+storage.initializeAdmin().catch(console.error);
