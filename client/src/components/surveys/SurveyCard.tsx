@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Survey } from '@/types';
 import { formatDate, getCategoryColor } from '@/lib/utils';
 import { Calendar, Clock } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SurveyCardProps {
   survey: Survey;
@@ -15,12 +16,16 @@ interface SurveyCardProps {
 
 export default function SurveyCard({ survey, type, onTakeSurvey, reward }: SurveyCardProps) {
   const { id, title, description, category, reward_amount, estimated_time, created_at } = survey;
+  const { user } = useAuth();
   
   const handleTakeSurvey = () => {
     if (onTakeSurvey) {
       onTakeSurvey(id);
     }
   };
+  
+  // Only admins should see category information
+  const showCategory = user?.role === 'admin';
   
   return (
     <Card className="h-full overflow-hidden">
@@ -49,11 +54,15 @@ export default function SurveyCard({ survey, type, onTakeSurvey, reward }: Surve
             <span>Est. time: {estimated_time} minutes</span>
           </div>
         )}
-        <div className="mt-2">
-          <Badge className={`${getCategoryColor(category)}`}>
-            {category}
-          </Badge>
-        </div>
+        
+        {/* Only show category information to admins */}
+        {showCategory && (
+          <div className="mt-2">
+            <Badge className={`${getCategoryColor(category)}`}>
+              {category}
+            </Badge>
+          </div>
+        )}
       </CardContent>
       {type === 'marketplace' && (
         <CardFooter className="bg-gray-50 px-5 py-3">

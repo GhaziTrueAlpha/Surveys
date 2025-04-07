@@ -72,11 +72,17 @@ export default function SurveyForm({ isOpen, onClose, onSuccess }: SurveyFormPro
   const [activeTab, setActiveTab] = useState("basic");
   
   // Fetch clients for dropdown
-  const { data: clients } = useQuery({
+  const { data: clients = [] } = useQuery({
     queryKey: ['/api/users'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/users?role=client&flag=yes');
-      return response as unknown as User[];
+      // Ensure we always return an array
+      if (Array.isArray(response)) {
+        return response as User[];
+      } else {
+        console.error("Expected users API to return an array but got:", response);
+        return [] as User[];
+      }
     }
   });
   

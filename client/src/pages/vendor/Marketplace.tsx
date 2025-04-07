@@ -46,11 +46,18 @@ export default function VendorMarketplace() {
   const completedSurveyIds = completedResponses ? 
     completedResponses.map((response: SurveyResponse) => response.survey_id) : [];
 
-  // Filter available surveys (not completed yet and matching search term)
+  // Filter available surveys (not completed yet, matching vendor's category, and matching search term)
   const filteredSurveys = availableSurveys ? 
     availableSurveys
-      .filter((survey: Survey) => !completedSurveyIds.includes(survey.id) && survey.is_active)
+      .filter((survey: Survey) => 
+        // Filter by completion status and active status
+        !completedSurveyIds.includes(survey.id) && 
+        survey.is_active &&
+        // Filter by vendor's category - only show surveys that match vendor's category
+        (user?.category === survey.category)
+      )
       .filter((survey: Survey) => {
+        // Filter by search term
         if (!searchTerm) return true;
         return (
           survey.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
