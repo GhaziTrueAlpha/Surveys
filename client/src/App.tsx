@@ -22,6 +22,12 @@ import ClientSurveys from "@/pages/client/Surveys";
 import ClientMetrics from "@/pages/client/Metrics";
 import ClientAnalysis from "@/pages/client/Analysis";
 
+// Survey redirect pages
+import SecurityRedirect from "@/pages/survey/Security";
+import QuotaRedirect from "@/pages/survey/Quota";
+import CompletionRedirect from "@/pages/survey/Completed";
+import TerminationRedirect from "@/pages/survey/Terminated";
+
 // Auth provider
 import { AuthProvider } from "@/hooks/useAuth";
 
@@ -82,6 +88,12 @@ function Router() {
       <Route path="/client/analysis">
         {user && user.role === 'client' && user.flag === 'yes' ? <ClientAnalysis /> : isPendingApproval ? <PendingApproval /> : <Signin />}
       </Route>
+
+      {/* Survey redirect routes - accessible to everyone */}
+      <Route path="/survey/security" component={SecurityRedirect} />
+      <Route path="/survey/quota" component={QuotaRedirect} />
+      <Route path="/survey/completed/:surveyId" component={CompletionRedirect} />
+      <Route path="/survey/terminated" component={TerminationRedirect} />
 
       {/* Fallback to 404 */}
       <Route component={NotFound} />

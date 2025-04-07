@@ -60,6 +60,20 @@ export const surveys = pgTable("surveys", {
   reward_amount: text("reward_amount"),
   estimated_time: text("estimated_time"),
   created_by: uuid("created_by").references(() => users.id),
+  client_id: uuid("client_id").references(() => users.id),
+  loi: text("loi"), // Length of interview
+  sample_size: text("sample_size"), // Sample size/People size/N/SS
+  ir: text("ir"), // Incidence rate
+  market: text("market"), // Market/Geo/Country
+  target_audience: text("target_audience"), // Target audience
+  project_type: text("project_type"), // Project type/category
+  cpi: text("cpi"), // CPI/Budget
+  client_currency: text("client_currency"), // Client currency for payment
+  survey_link: text("survey_link"), // Main survey link
+  security_redirect: text("security_redirect"), // Security redirect link
+  quota_redirect: text("quota_redirect"), // Quota redirect link
+  completion_redirect: text("completion_redirect"), // Completion redirect link
+  termination_redirect: text("termination_redirect"), // Termination redirect link
   created_at: timestamp("created_at").defaultNow(),
   is_active: boolean("is_active").default(true),
 });
@@ -82,6 +96,10 @@ export const usersRelations = relations(users, ({ many }) => ({
 export const surveysRelations = relations(surveys, ({ one, many }) => ({
   creator: one(users, {
     fields: [surveys.created_by],
+    references: [users.id],
+  }),
+  client: one(users, {
+    fields: [surveys.client_id],
     references: [users.id],
   }),
   responses: many(surveyResponses),
@@ -114,6 +132,20 @@ export const insertSurveySchema = createInsertSchema(surveys, {
   category: z.enum(SURVEY_CATEGORIES),
   title: z.string().min(1),
   description: z.string().optional(),
+  client_id: z.string().uuid(),
+  loi: z.string().optional(),
+  sample_size: z.string().optional(),
+  ir: z.string().optional(),
+  market: z.string().optional(),
+  target_audience: z.string().optional(),
+  project_type: z.string().optional(),
+  cpi: z.string().optional(),
+  client_currency: z.string().optional(),
+  survey_link: z.string().url(),
+  security_redirect: z.string().url().optional(),
+  quota_redirect: z.string().url().optional(),
+  completion_redirect: z.string().url().optional(),
+  termination_redirect: z.string().url().optional()
 }).omit({ id: true, created_at: true });
 
 export const insertSurveyResponseSchema = createInsertSchema(surveyResponses).omit({ id: true, completed_at: true });
