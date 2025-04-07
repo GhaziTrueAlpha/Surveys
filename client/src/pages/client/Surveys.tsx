@@ -11,7 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 export default function ClientSurveys() {
   const [isSurveyFormOpen, setIsSurveyFormOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
   
@@ -59,7 +59,7 @@ export default function ClientSurveys() {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {SURVEY_CATEGORIES.map(category => (
                     <SelectItem key={category} value={category}>{category}</SelectItem>
                   ))}
