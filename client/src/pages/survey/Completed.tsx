@@ -28,7 +28,7 @@ export default function CompletionRedirect() {
       
       return response;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setRewardEarned(data?.reward_earned || 'Not specified');
       toast({
         title: 'Survey Completed',
@@ -72,16 +72,16 @@ export default function CompletionRedirect() {
             Survey Completed
           </h2>
           <div className="mt-6 text-gray-600">
-            <p className="mb-4">
-              Thank you for completing the survey! Your responses have been recorded.
+            <p className="mb-4 font-medium text-green-600">
+              Thank you for completing the survey! Your rewards will be updated soon.
             </p>
             {rewardEarned && (
               <p className="mb-4 font-medium">
-                Reward earned: {rewardEarned}
+                Reward earned: ${rewardEarned}
               </p>
             )}
             <p className="mb-8">
-              You can now return to the marketplace to find more surveys.
+              Your contribution is highly valued. You can now check out other available surveys in the marketplace.
             </p>
             <Button
               onClick={() => setLocation('/vendor/marketplace')}

@@ -34,7 +34,17 @@ import { AuthProvider } from "@/hooks/useAuth";
 
 function Router() {
   const [location] = useLocation();
-  const { data: user } = useQuery({ 
+  const { data: user } = useQuery<{ 
+    id: string;
+    email: string;
+    role: 'admin' | 'vendor' | 'client';
+    flag: 'yes' | 'no';
+    name: string;
+    company_name: string;
+    account_email: string;
+    gst: string;
+    city: string;
+  } | null>({ 
     queryKey: ['/api/auth/me'],
     refetchOnWindowFocus: true,
     staleTime: 5 * 60 * 1000, // 5 minutes

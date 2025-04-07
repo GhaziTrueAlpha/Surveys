@@ -15,12 +15,11 @@ export default function QuotaRedirect() {
             Survey Quota Reached
           </h2>
           <div className="mt-6 text-gray-600">
-            <p className="mb-4">
-              The quota for this survey has been reached. 
-              We have already collected enough responses from participants with your profile.
+            <p className="mb-4 font-medium text-yellow-600">
+              You are in a category for which surveys are no longer required.
             </p>
             <p className="mb-8">
-              Thank you for your interest. Please check back for other available surveys.
+              We have reached the quota for your demographic category. Please check back later for new survey opportunities that match your profile.
             </p>
             <Button
               onClick={() => setLocation('/vendor/marketplace')}

@@ -15,18 +15,17 @@ export default function SecurityRedirect() {
             Survey Security Alert
           </h2>
           <div className="mt-6 text-gray-600">
-            <p className="mb-4">
-              Your survey session has been flagged for security reasons. 
-              This may be due to suspicious activity or invalid responses.
+            <p className="mb-4 font-bold text-red-600">
+              Don't play dumb buddy you're trying to do something sneaky. We caught you!
             </p>
             <p className="mb-8">
-              If you believe this is a mistake, please contact the survey administrator.
+              This security violation has been logged. Please return to the marketplace for surveys you're eligible to take.
             </p>
             <Button
-              onClick={() => setLocation('/')}
-              className="w-full"
+              onClick={() => setLocation('/vendor/marketplace')}
+              className="w-full bg-red-600 hover:bg-red-700"
             >
-              Return to Homepage
+              Return to Marketplace
             </Button>
           </div>
         </div>

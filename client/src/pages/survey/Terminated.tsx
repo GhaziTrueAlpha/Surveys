@@ -15,12 +15,11 @@ export default function TerminationRedirect() {
             Survey Terminated
           </h2>
           <div className="mt-6 text-gray-600">
-            <p className="mb-4">
-              We're sorry, but your survey session has been terminated. 
-              This may be due to taking too long to complete the survey or other technical issues.
+            <p className="mb-4 font-medium text-red-600">
+              Your survey session has been terminated because you took too long to complete it.
             </p>
             <p className="mb-8">
-              Please check back for other available surveys you can participate in.
+              The survey has a time limit that has been exceeded. Please try to complete future surveys within the allotted time.
             </p>
             <Button
               onClick={() => setLocation('/vendor/marketplace')}
