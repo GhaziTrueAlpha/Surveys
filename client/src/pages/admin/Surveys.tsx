@@ -95,6 +95,8 @@ export default function AdminSurveys() {
           // This is handled inside the component
           // Here we could add additional logic if needed
         }}
+        searchTerm={searchTerm}
+        categoryFilter={selectedCategory}
       />
       
       {/* Survey Form Dialog */}

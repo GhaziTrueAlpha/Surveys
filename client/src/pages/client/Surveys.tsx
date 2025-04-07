@@ -41,9 +41,6 @@ export default function ClientSurveys() {
   return (
     <DashboardLayout
       title="My Surveys"
-      actionButton={
-        <Button onClick={handleCreateSurvey}>Create Survey</Button>
-      }
     >
       {/* Survey Filters */}
       <div className="bg-white p-4 rounded-lg shadow mb-6">
@@ -95,6 +92,8 @@ export default function ClientSurveys() {
           // This is handled inside the component
           // Here we could add additional logic if needed
         }}
+        searchTerm={searchTerm}
+        categoryFilter={selectedCategory}
       />
       
       {/* Survey Form Dialog */}

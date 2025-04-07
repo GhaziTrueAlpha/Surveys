@@ -190,9 +190,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = req.user as any;
       
-      // Only admins and clients can create surveys
-      if (user.role !== "admin" && user.role !== "client") {
-        return res.status(403).json({ message: "Forbidden" });
+      // Only admins can create surveys
+      if (user.role !== "admin") {
+        return res.status(403).json({ message: "Only administrators can create surveys" });
       }
       
       const surveyData = insertSurveySchema.parse({

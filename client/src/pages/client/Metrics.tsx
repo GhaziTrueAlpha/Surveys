@@ -1,6 +1,7 @@
 import React from 'react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { Survey } from '@/types';
@@ -16,8 +17,9 @@ export default function ClientMetrics() {
   });
 
   // Calculate metrics from surveys
-  const totalSurveys = surveys?.length || 0;
-  const activeSurveys = surveys?.filter((survey: Survey) => survey.is_active).length || 0;
+  const surveysArray = surveys as Survey[] || [];
+  const totalSurveys = surveysArray?.length || 0;
+  const activeSurveys = surveysArray?.filter((survey: Survey) => survey.is_active).length || 0;
   
   // In a real app, these metrics would be calculated from actual data
   // For now we'll use placeholder calculations

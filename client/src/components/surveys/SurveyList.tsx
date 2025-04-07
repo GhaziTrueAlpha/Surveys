@@ -1,10 +1,10 @@
 import React from 'react';
 import { Survey } from '@/types';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, FileText } from 'lucide-react';
+import { AlertCircle, FileText, Check, X } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,14 +15,49 @@ interface SurveyListProps {
   onEdit?: (survey: Survey) => void;
   onDelete?: (surveyId: string) => void;
   onView?: (surveyId: string) => void;
+  onToggleActive?: (surveyId: string, isActive: boolean) => void;
+  searchTerm?: string;
+  categoryFilter?: string;
 }
 
-export default function SurveyList({ role, onEdit, onDelete, onView }: SurveyListProps) {
+export default function SurveyList({ 
+  role, 
+  onEdit, 
+  onDelete, 
+  onView, 
+  onToggleActive,
+  searchTerm = '',
+  categoryFilter = 'all'
+}: SurveyListProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const { data: surveys, isLoading, error } = useQuery<Survey[]>({
     queryKey: ['/api/surveys'],
   });
+  
+  const handleToggleActive = async (surveyId: string, currentActiveState: boolean) => {
+    try {
+      await apiRequest('PATCH', `/api/surveys/${surveyId}`, {
+        is_active: !currentActiveState
+      });
+      
+      // Invalidate the surveys query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['/api/surveys'] });
+      
+      toast({
+        title: 'Success!',
+        description: `Survey ${!currentActiveState ? 'activated' : 'deactivated'} successfully.`,
+      });
+    } catch (error) {
+      console.error('Survey toggle error:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update survey status',
+        variant: 'destructive'
+      });
+    }
+  };
   
   const handleDelete = async (surveyId: string) => {
     if (!confirm('Are you sure you want to delete this survey?')) {
@@ -68,7 +103,21 @@ export default function SurveyList({ role, onEdit, onDelete, onView }: SurveyLis
     );
   }
   
-  if (!surveys || surveys.length === 0) {
+  // Filter surveys based on search term and category
+  const filteredSurveys = surveys?.filter((survey: Survey) => {
+    const matchesSearch = searchTerm 
+      ? survey.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (survey.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+      : true;
+    
+    const matchesCategory = categoryFilter && categoryFilter !== 'all' 
+      ? survey.category === categoryFilter
+      : true;
+    
+    return matchesSearch && matchesCategory;
+  }) || [];
+  
+  if (!surveys || surveys.length === 0 || filteredSurveys.length === 0) {
     return (
       <div className="bg-white shadow overflow-hidden sm:rounded-md p-6 text-center">
         <div className="flex justify-center mb-4">
@@ -76,9 +125,11 @@ export default function SurveyList({ role, onEdit, onDelete, onView }: SurveyLis
         </div>
         <h3 className="text-lg font-medium text-gray-900">No surveys available</h3>
         <p className="mt-1 text-sm text-gray-500">
-          {role === 'admin' 
-            ? 'No surveys have been created yet.'
-            : 'You haven\'t created any surveys yet.'}
+          {surveys && surveys.length > 0 && filteredSurveys.length === 0
+            ? 'No surveys match your search criteria.'
+            : role === 'admin' 
+              ? 'No surveys have been created yet.'
+              : 'You haven\'t created any surveys yet.'}
         </p>
       </div>
     );
@@ -87,7 +138,7 @@ export default function SurveyList({ role, onEdit, onDelete, onView }: SurveyLis
   return (
     <div className="bg-white shadow overflow-hidden sm:rounded-md">
       <ul className="divide-y divide-gray-200">
-        {surveys.map((survey: Survey) => (
+        {filteredSurveys.map((survey: Survey) => (
           <li key={survey.id}>
             <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors">
               <div className="flex items-center justify-between">
@@ -127,6 +178,20 @@ export default function SurveyList({ role, onEdit, onDelete, onView }: SurveyLis
                       onClick={() => onView(survey.id)}
                     >
                       View
+                    </Button>
+                  )}
+                  {role === 'admin' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className={survey.is_active ? "text-red-700 hover:bg-red-50" : "text-green-700 hover:bg-green-50"}
+                      onClick={() => handleToggleActive(survey.id, survey.is_active)}
+                    >
+                      {survey.is_active ? (
+                        <><X className="h-4 w-4 mr-1" /> Disable</>
+                      ) : (
+                        <><Check className="h-4 w-4 mr-1" /> Enable</>
+                      )}
                     </Button>
                   )}
                   {onDelete && (
