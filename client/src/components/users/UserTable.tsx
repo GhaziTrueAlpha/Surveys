@@ -33,11 +33,11 @@ export default function UserTable({ role }: UserTableProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [approvalFilter, setApprovalFilter] = useState('');
+  const [approvalFilter, setApprovalFilter] = useState('all');
   
   // Fetch users based on role
-  const { data: users, isLoading, error } = useQuery({
-    queryKey: [`/api/users?role=${role}${approvalFilter ? `&flag=${approvalFilter}` : ''}`],
+  const { data: users, isLoading, error } = useQuery<User[]>({
+    queryKey: [`/api/users?role=${role}${approvalFilter !== 'all' ? `&flag=${approvalFilter}` : ''}`],
   });
   
   const handleApproveUser = async (userId: string, category: SurveyCategory) => {
@@ -113,7 +113,7 @@ export default function UserTable({ role }: UserTableProps) {
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
                   <SelectItem value="yes">Approved</SelectItem>
                   <SelectItem value="no">Pending</SelectItem>
                 </SelectContent>

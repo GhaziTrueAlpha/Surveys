@@ -27,7 +27,7 @@ export default function VendorMarketplace() {
     data: availableSurveys, 
     isLoading: isLoadingSurveys,
     error: surveysError
-  } = useQuery({
+  } = useQuery<Survey[]>({
     queryKey: ['/api/surveys'],
     enabled: !!user,
   });
@@ -37,7 +37,7 @@ export default function VendorMarketplace() {
     data: completedResponses,
     isLoading: isLoadingResponses,
     error: responsesError
-  } = useQuery({
+  } = useQuery<SurveyResponse[]>({
     queryKey: ['/api/survey-responses/vendor'],
     enabled: !!user,
   });

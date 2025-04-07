@@ -20,7 +20,7 @@ interface SurveyListProps {
 export default function SurveyList({ role, onEdit, onDelete, onView }: SurveyListProps) {
   const { toast } = useToast();
   
-  const { data: surveys, isLoading, error } = useQuery({
+  const { data: surveys, isLoading, error } = useQuery<Survey[]>({
     queryKey: ['/api/surveys'],
   });
   
