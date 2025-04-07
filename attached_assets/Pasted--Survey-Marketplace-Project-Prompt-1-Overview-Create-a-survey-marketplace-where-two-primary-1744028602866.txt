@@ -1,0 +1,310 @@
+# Survey Marketplace Project Prompt
+
+## 1. Overview
+Create a survey marketplace where two primary user types—**clients** and **vendors**—interact with surveys. In this system:
+- **Clients** initiate surveys.
+- **Vendors** participate by completing surveys.
+- An **admin** oversees the entire process by managing surveys and user accounts.
+
+The system leverages:
+- **Supabase** as the backend (using PostgreSQL for data storage and security).
+- **React** for the frontend interface.
+
+**Key Concepts:**
+- **User Approval:** Users sign up as either vendors or clients, but their accounts remain inactive until an admin approves them.
+- **Category Binding:** Each vendor is assigned a category upon approval. This category filters which surveys they can access and work on.
+- **Security:** Supabase Row Level Security (RLS) ensures that each user only accesses data (e.g., surveys) relevant to their assigned category.
+
+---
+
+## 2. User Roles and Dashboards
+
+### 2.1. Admin
+**Responsibilities:**
+- **User Management:** Approve new vendors/clients by updating their approval flag (from 'no' to 'yes') and assigning them a category.
+- **Survey Management:** Create surveys, assign a survey category, edit survey details, and manage survey distribution.
+
+**Dashboard Tabs:**
+- **Surveys:** Create, edit, and delete surveys.
+- **Vendors:** View, approve, and assign categories to vendor accounts.
+- **Clients:** View, approve, and assign categories to client accounts.
+
+**New Feature – Category Selection for Vendors:**
+- When approving vendors, the admin dashboard now includes a menu with the following predefined categories:
+  - Automobile
+  - Food & Beverage
+  - Ethnicity
+  - Business & Occupation
+  - Healthcare Consumer
+  - Healthcare Professional
+  - Mobile
+  - Smoking
+  - Household
+  - Education
+  - Electronic
+  - Gaming
+  - Mother & Baby
+  - Media
+  - Travel
+  - Hobbies & Interests
+
+  The selected category is linked to the vendor’s record.
+
+- **Survey Creation:** When creating a survey, the admin must select one of the above categories. Only vendors with a matching category will see the survey in their Marketplace tab.
+
+**Special Notes:**
+- The `category` field in the user record is managed exclusively by the admin. Neither vendors nor clients will see or modify their category on the frontend.
+- Admins are set up directly via the Supabase dashboard or through secure internal processes.
+
+### 2.2. Vendor
+**Workflow:**
+1. **Signup:** Vendors register by selecting the "vendor" role. Upon signup, their record is inserted with default values (e.g., flag: 'no').
+2. **Approval:** An admin manually approves the vendor and assigns one of the predefined categories. Only after approval will they gain dashboard access.
+
+**Dashboard Tabs:**
+- **Metrics (Default):** Displays key performance metrics (e.g., total surveys completed, daily clicks, conversion rates).
+- **Analysis:** Provides detailed analytics on survey performance, trends, and insights.
+- **Marketplace:** Lists available surveys filtered based on the vendor’s assigned category.
+  - When a vendor clicks on a survey link, the system checks if the vendor’s category matches the survey’s category. If not, a “Not eligible” message is displayed.
+
+### 2.3. Client
+**Workflow:**
+1. **Signup:** Clients register by selecting the "client" role. Their account remains inactive until approved.
+2. **Approval:** An admin approves the client account and assigns a category (if needed).
+
+**Dashboard Tabs:**
+- **Surveys:** Displays surveys created or assigned to the client.
+- **Metrics:** Shows overall survey performance metrics such as click counts, response rates, and trends.
+- **Analysis:** Provides insights on survey performance, highlighting which surveys performed well and which underperformed.
+
+---
+
+## 3. Database Schema (Supabase / PostgreSQL)
+
+### 3.1. Users Table
+Stores all user data (vendors, clients, and admins). Key fields include:
+- **id:** Unique identifier (UUID).
+- **email:** Unique email for each user.
+- **role:** The user type ('vendor', 'client', or 'admin').
+- **flag:** Approval status (default is 'no'; becomes 'yes' upon admin approval).
+- **category:** A string field that is assigned by the admin upon approval. For vendors, this value will be one of the predefined categories.
+- **created_at:** Timestamp of account creation.
+
+**Example SQL:**
+```sql
+CREATE TABLE users (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email text UNIQUE NOT NULL,
+  role text NOT NULL CHECK (role IN ('vendor', 'client', 'admin')),
+  flag text DEFAULT 'no',
+  category text,
+  created_at timestamp with time zone DEFAULT now()
+);
+
+ALTER TABLE users
+ADD CONSTRAINT flag_category_check
+CHECK (flag = 'no' OR (flag = 'yes' AND category IS NOT NULL));
+```
+
+### 3.2. Surveys Table
+Stores all survey-related details:
+- **id:** Unique survey identifier (UUID).
+- **title & description:** Title and detailed description of the survey.
+- **category:** Category identifier selected during survey creation that matches vendor categories.
+- **created_by:** Foreign key reference to the user (admin or client) who created the survey.
+- **created_at:** Timestamp of survey creation.
+
+**Example SQL:**
+```sql
+CREATE TABLE surveys (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title text NOT NULL,
+  description text,
+  category text,
+  created_by uuid REFERENCES users (id),
+  created_at timestamp with time zone DEFAULT now()
+);
+```
+
+### 3.3. Optional Additional Tables
+- **Survey Responses/Analytics:** To record vendor responses, clicks, and other analytics.
+- **Audit Logs:** To track admin actions like user approvals or survey updates.
+
+---
+
+## 4. Supabase Features and Backend Implementation
+
+### 4.1. Authentication and User Management
+- **Sign Up Flow:** Use Supabase Authentication to register users with default values (flag = 'no' and no category).
+- **Admin Approval Flow:** 
+  - The admin logs into the dashboard and reviews pending registrations.
+  - A secured interface allows the admin to update the user's flag to 'yes' and assign one of the predefined categories from the drop-down list.
+  - Optionally, a stored procedure can encapsulate this logic:
+    ```sql
+    CREATE OR REPLACE FUNCTION approve_user(p_user_id uuid, p_category text)
+    RETURNS VOID AS $$
+    BEGIN
+      IF p_category IS NULL THEN
+        RAISE EXCEPTION 'A valid category must be provided to approve the user.';
+      END IF;
+      UPDATE users
+      SET flag = 'yes', category = p_category
+      WHERE id = p_user_id;
+    END;
+    $$ LANGUAGE plpgsql;
+    ```
+
+### 4.2. Row Level Security (RLS) Policies
+- **Vendor Access to Surveys:**
+  - Vendors should only view surveys where the survey’s category matches their assigned category.
+  ```sql
+  CREATE POLICY vendor_survey_access ON surveys
+  FOR SELECT
+  USING (category = (SELECT category FROM users WHERE id = auth.uid()));
+  ```
+- **Client and Admin Access:**
+  - Create policies that allow clients to view only the surveys they created or that are assigned to them.
+  - Admins have full access to all tables.
+
+---
+
+## 5. Frontend Implementation (React)
+
+### 5.1. Pages and Components
+- **Landing Page:** 
+  - Overview of the marketplace.
+  - Navigation for signing up or signing in.
+- **Sign Up Page:** 
+  - Option to select role (vendor or client).
+  - On submission, create the user record using Supabase’s auth API (with default `flag: 'no'`).
+
+- **Sign In Page:**
+  - Authenticate the user.
+  - If the user’s flag is still 'no', display a “Pending Approval” message.
+  - If approved, redirect to the corresponding dashboard.
+
+### 5.2. Dashboard Pages
+
+#### 5.2.1. Admin Dashboard
+- **Surveys Tab:** Create, edit, and delete surveys. When creating a survey, the admin selects a category from the predefined list.
+- **Vendors Tab:** List vendor users with options to approve and assign categories using the drop-down menu containing:
+  - Automobile, Food & Beverage, Ethnicity, Business & Occupation, Healthcare Consumer, Healthcare Professional, Mobile, Smoking, Household, Education, Electronic, Gaming, Mother & Baby, Media, Travel, Hobbies & Interests.
+- **Clients Tab:** List client users with options to approve and assign categories (if applicable).
+
+#### 5.2.2. Vendor Dashboard
+- **Metrics (Default Tab):** Displays key performance metrics (e.g., clicks, completions).
+- **Analysis:** Detailed analytics on survey performance.
+- **Marketplace:** Lists surveys filtered by the vendor’s assigned category.
+  - When a vendor clicks on a survey, the system checks if the vendor’s category matches the survey’s category. If not, a “Not eligible” message is displayed.
+
+#### 5.2.3. Client Dashboard
+- **Surveys:** Lists surveys initiated by or assigned to the client.
+- **Metrics:** Displays overall survey performance metrics.
+- **Analysis:** Provides insights on survey performance.
+
+### 5.3. API Integration
+- **Using Supabase Client Library in React:**
+  - Handle authentication, data fetching, mutations, and real-time subscriptions (if needed).
+  - **Example:** Fetch surveys for a vendor based on category:
+    ```javascript
+    const { data: surveys, error } = await supabase
+      .from('surveys')
+      .select('*')
+      .eq('category', currentUser.category);
+    ```
+
+### 5.4. Survey Link Binding
+- **Survey URL Generation:** When an admin creates a survey, generate a unique URL that internally holds the survey’s category.
+- **Access Control in Frontend:**
+  - Upon accessing the survey link, query the survey details.
+  - Validate the vendor’s category against the survey’s category.
+  - Allow access or display an eligibility error accordingly.
+
+---
+
+## 6. Registration Details Enhancement
+
+### 6.1. For Clients
+During client registration, collect and store the following details:
+- **Name** (Required)
+- **Website**
+- **Email** (Required)
+- **Company Name** (Required)
+- **Account Email** (Required)
+- **Contact Number**
+- **HSN SAC**
+- **GST** (Required)
+- **Country**
+- **Region**
+- **City** (Required)
+
+### 6.2. For Vendors
+During vendor registration, collect and store the same details as for clients:
+- **Name** (Required)
+- **Website**
+- **Email** (Required)
+- **Company Name** (Required)
+- **Account Email** (Required)
+- **Contact Number**
+- **HSN SAC**
+- **GST** (Required)
+- **Country**
+- **Region**
+- **City** (Required)
+
+---
+
+## 7. Final Deliverables
+
+### 7.1. Database Setup
+- SQL scripts for creating the `users` and `surveys` tables.
+- Setup of constraints, RLS policies, and optional stored procedures for user approval.
+
+### 7.2. Frontend Application
+- A complete React project with pages for landing, signup, sign-in, and dashboards (admin, vendor, client).
+- Integration with Supabase for authentication and data operations.
+- Modular dashboard components for metrics, analysis, and survey listing.
+
+### 7.3. Documentation
+- A README that explains the system architecture, setup steps, and how to run the project.
+- API documentation for any custom functions or endpoints.
+
+---
+
+## 8. Step-by-Step Implementation Outline
+
+1. **Plan & Design:**
+   - Define user roles, required fields, and data flow.
+   - Sketch out UI wireframes for the landing page, signup/signin, and dashboards.
+
+2. **Database Setup (Supabase):**
+   - Create the `users` and `surveys` tables with the provided SQL scripts.
+   - Implement additional tables (e.g., Survey Analytics, Audit Logs) if needed.
+   - Setup Row Level Security (RLS) policies.
+
+3. **Backend Implementation:**
+   - Integrate Supabase Authentication.
+   - Develop and test the stored procedure for user approval.
+   - Ensure that all data integrity constraints are active.
+
+4. **Frontend Implementation (React):**
+   - Build the Landing, Signup, and Sign-In pages.
+   - Develop dashboard components for admin, vendor, and client.
+   - Integrate Supabase client libraries for real-time data operations.
+   - Implement survey link generation and category validation logic.
+
+5. **Registration Form Enhancement:**
+   - Update the signup forms for both vendors and clients to include all the required fields (Name, Website, Email, etc.).
+   - Validate input fields to ensure mandatory data is provided.
+
+6. **Testing & Deployment:**
+   - Perform thorough testing for each user role.
+   - Verify that RLS policies enforce proper data access.
+   - Deploy the application and database setup.
+   - Document the system architecture and usage instructions.
+
+7. **Final Review & Documentation:**
+   - Update the README with detailed setup instructions.
+   - Provide API documentation for custom functions and endpoints.
+   - Ensure that the system meets all the security, scalability, and usability requirements.
+
