@@ -84,7 +84,7 @@ export default function VendorMarketplace() {
       // For now, we'll just create a survey response
       await apiRequest('POST', '/api/survey-responses', {
         survey_id: surveyId,
-        reward_earned: availableSurveys.find((s: Survey) => s.id === surveyId)?.reward_amount
+        reward_earned: availableSurveys?.find((s: Survey) => s.id === surveyId)?.reward_amount || '0'
       });
       
       // Refetch survey responses

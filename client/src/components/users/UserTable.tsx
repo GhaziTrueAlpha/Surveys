@@ -40,7 +40,29 @@ export default function UserTable({ role }: UserTableProps) {
     queryKey: [`/api/users?role=${role}${approvalFilter !== 'all' ? `&flag=${approvalFilter}` : ''}`],
   });
   
-  const handleApproveUser = async (userId: string, category: SurveyCategory) => {
+  // Track the selected category for each user
+  const [selectedCategories, setSelectedCategories] = useState<Record<string, SurveyCategory>>({});
+
+  const handleSelectCategory = (userId: string, category: SurveyCategory) => {
+    setSelectedCategories({
+      ...selectedCategories,
+      [userId]: category
+    });
+  };
+
+  const handleApproveUser = async (userId: string) => {
+    // Get the selected category for this user
+    const category = selectedCategories[userId];
+    
+    if (!category) {
+      toast({
+        title: 'Error',
+        description: 'Please select a category first',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     try {
       await apiRequest('PATCH', `/api/users/${userId}`, {
         flag: 'yes',
@@ -175,7 +197,7 @@ export default function UserTable({ role }: UserTableProps) {
                   <TableCell className="text-right">
                     {user.flag === 'no' ? (
                       <div className="flex items-center space-x-2 justify-end">
-                        <Select onValueChange={(value) => handleApproveUser(user.id, value as SurveyCategory)}>
+                        <Select onValueChange={(value: string) => handleSelectCategory(user.id, value as SurveyCategory)}>
                           <SelectTrigger className="w-[180px] text-xs">
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
@@ -191,7 +213,8 @@ export default function UserTable({ role }: UserTableProps) {
                           size="sm"
                           variant="outline"
                           className="bg-green-600 text-white hover:bg-green-700"
-                          disabled
+                          onClick={() => handleApproveUser(user.id)}
+                          disabled={!selectedCategories[user.id]}
                         >
                           Approve
                         </Button>

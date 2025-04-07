@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 interface DashboardLayoutProps {
   children: React.ReactNode;
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   actionButton?: React.ReactNode;
 }
 
