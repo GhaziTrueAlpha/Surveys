@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertSurveySchema, insertSurveyResponseSchema } from "@shared/schema";
+import { insertUserSchema, insertSurveySchema, insertSurveyResponseSchema, type Survey } from "@shared/schema";
 import express from "express";
 import session from "express-session";
 import passport from "passport";
@@ -40,9 +40,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return done(null, false, { message: "Invalid credentials" });
           }
 
-          // In a real app, we'd be comparing hashed passwords
-          // For this example, we'll just compare the raw values
-          if (password !== user.password) {
+          // Compare the hashed password
+          const isMatch = await bcrypt.compare(password, user.password);
+          if (!isMatch) {
             return done(null, false, { message: "Invalid credentials" });
           }
 
@@ -98,8 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email already in use" });
       }
 
-      // In a real app with Supabase, password would be handled by Auth service
-      // Here we're storing it directly, but in practice it would be hashed
+      // Password is already hashed in the storage layer's createUser method
       const user = await storage.createUser(userData);
       
       res.status(201).json({
@@ -213,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as any;
       const { category } = req.query;
       
-      let surveys = [];
+      let surveys: Survey[] = [];
       
       if (user.role === "admin") {
         // Admins can see all surveys
@@ -226,7 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       } else if (user.role === "vendor") {
         // Vendors can only see surveys matching their category
-        surveys = await storage.getSurveys(user.category);
+        surveys = await storage.getSurveys(user.category || undefined);
       }
       
       res.json(surveys);
@@ -310,7 +309,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Check if survey exists and matches vendor's category
-      const survey = await storage.getSurvey(responseData.survey_id);
+      const surveyId = responseData.survey_id as string;
+      const survey = await storage.getSurvey(surveyId);
       if (!survey) {
         return res.status(404).json({ message: "Survey not found" });
       }
