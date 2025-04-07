@@ -87,20 +87,40 @@ export default function VendorMarketplace() {
 
   const handleTakeSurvey = async (surveyId: string) => {
     try {
-      // In a real application, this would redirect to the actual survey
-      // For now, we'll just create a survey response
-      await apiRequest('POST', '/api/survey-responses', {
-        survey_id: surveyId,
-        reward_earned: availableSurveys?.find((s: Survey) => s.id === surveyId)?.reward_amount || '0'
-      });
+      // Find the survey by ID
+      const survey = availableSurveys?.find((s: Survey) => s.id === surveyId);
       
-      // Refetch survey responses
-      queryClient.invalidateQueries({ queryKey: ['/api/survey-responses/vendor'] });
+      if (!survey) {
+        toast({
+          title: 'Error',
+          description: 'Survey not found',
+          variant: 'destructive'
+        });
+        return;
+      }
       
-      toast({
-        title: 'Success!',
-        description: 'Survey completed successfully.',
-      });
+      // If the survey has a main_market_link, redirect to it
+      if (survey.main_market_link) {
+        window.location.href = survey.main_market_link;
+      } else if (survey.unique_id) {
+        // If no main_market_link but has unique_id, construct and redirect to verification URL
+        const baseUrl = window.location.origin;
+        window.location.href = `${baseUrl}/survey/verify/${survey.unique_id}`;
+      } else {
+        // Fallback to the old method - create a response directly
+        await apiRequest('POST', '/api/survey-responses', {
+          survey_id: surveyId,
+          reward_earned: survey.reward_amount || '0'
+        });
+        
+        // Refetch survey responses
+        queryClient.invalidateQueries({ queryKey: ['/api/survey-responses/vendor'] });
+        
+        toast({
+          title: 'Success!',
+          description: 'Survey completed successfully.',
+        });
+      }
     } catch (error: any) {
       toast({
         title: 'Error',

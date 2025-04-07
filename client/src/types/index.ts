@@ -1,6 +1,7 @@
 // User types
 export interface User {
   id: string;
+  unique_id?: string; // Unique identifier for clients/vendors
   email: string;
   role: 'admin' | 'vendor' | 'client';
   flag: 'yes' | 'no';
@@ -42,12 +43,28 @@ export interface UserSigninData {
 // Survey types
 export interface Survey {
   id: string;
+  unique_id?: string; // Unique identifier for survey (e.g., 1112A)
   title: string;
   description?: string;
   category: SurveyCategory;
   reward_amount?: string;
   estimated_time?: string;
   created_by: string;
+  client_id?: string;
+  loi?: string; // Length of interview
+  sample_size?: string; // Sample size/People size
+  ir?: string; // Incidence rate
+  market?: string; // Market/Geography
+  target_audience?: string;
+  project_type?: string;
+  cpi?: string; // CPI/Budget
+  client_currency?: string;
+  survey_link?: string; // Main survey link
+  main_market_link?: string; // Auto-generated market link
+  security_redirect?: string;
+  quota_redirect?: string;
+  completion_redirect?: string;
+  termination_redirect?: string;
   created_at: string;
   is_active: boolean;
 }

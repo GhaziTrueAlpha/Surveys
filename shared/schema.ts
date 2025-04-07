@@ -33,6 +33,7 @@ export const SURVEY_CATEGORIES = [
 // Users Table
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
+  unique_id: text("unique_id"), // Unique ID for clients/vendors (e.g., 1112)
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull(),
@@ -54,6 +55,7 @@ export const users = pgTable("users", {
 // Surveys Table
 export const surveys = pgTable("surveys", {
   id: uuid("id").defaultRandom().primaryKey(),
+  unique_id: text("unique_id"), // Unique ID for surveys (e.g., 1112A)
   title: text("title").notNull(),
   description: text("description"),
   category: text("category").notNull(),
@@ -70,6 +72,7 @@ export const surveys = pgTable("surveys", {
   cpi: text("cpi"), // CPI/Budget
   client_currency: text("client_currency"), // Client currency for payment
   survey_link: text("survey_link"), // Main survey link
+  main_market_link: text("main_market_link"), // Main market link (unique per survey)
   security_redirect: text("security_redirect"), // Security redirect link
   quota_redirect: text("quota_redirect"), // Quota redirect link
   completion_redirect: text("completion_redirect"), // Completion redirect link

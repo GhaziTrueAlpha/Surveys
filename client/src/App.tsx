@@ -27,6 +27,7 @@ import SecurityRedirect from "@/pages/survey/Security";
 import QuotaRedirect from "@/pages/survey/Quota";
 import CompletionRedirect from "@/pages/survey/Completed";
 import TerminationRedirect from "@/pages/survey/Terminated";
+import VerifySurvey from "@/pages/survey/Verify";
 
 // Auth provider
 import { AuthProvider } from "@/hooks/useAuth";
@@ -94,6 +95,7 @@ function Router() {
       <Route path="/survey/quota" component={QuotaRedirect} />
       <Route path="/survey/completed/:surveyId" component={CompletionRedirect} />
       <Route path="/survey/terminated" component={TerminationRedirect} />
+      <Route path="/survey/verify/:surveyId" component={VerifySurvey} />
 
       {/* Fallback to 404 */}
       <Route component={NotFound} />

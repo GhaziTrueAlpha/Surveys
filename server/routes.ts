@@ -362,6 +362,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: error.message });
     }
   });
+  
+  // Get survey by unique ID (for the verification process)
+  // This route needs to be accessible without authentication for public access to verification
+  app.get("/api/surveys/unique/:uniqueId", async (req, res) => {
+    try {
+      const { uniqueId } = req.params;
+      const survey = await storage.getSurveyByUniqueId(uniqueId);
+      
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found" });
+      }
+      
+      res.json(survey);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

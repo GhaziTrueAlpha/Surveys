@@ -194,6 +194,19 @@ export default function SurveyList({
                       )}
                     </Button>
                   )}
+                  {role === 'admin' && survey.unique_id && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-blue-700 hover:bg-blue-50"
+                      onClick={() => {
+                        const baseUrl = window.location.origin;
+                        window.open(`${baseUrl}/survey/verify/${survey.unique_id}`, '_blank');
+                      }}
+                    >
+                      Test Verification
+                    </Button>
+                  )}
                   {onDelete && (
                     <Button 
                       variant="outline" 

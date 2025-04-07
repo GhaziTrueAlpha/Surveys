@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SURVEY_CATEGORIES, SurveyCategory, User } from '@/types';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface SurveyFormProps {
   isOpen: boolean;
@@ -57,10 +57,12 @@ const formSchema = z.object({
   cpi: z.string().optional(),
   client_currency: z.string().optional(),
   survey_link: z.string().url("Survey link must be a valid URL"),
+  main_market_link: z.string().optional(),
   security_redirect: z.string().url("Security redirect must be a valid URL").optional(),
   quota_redirect: z.string().url("Quota redirect must be a valid URL").optional(),
   completion_redirect: z.string().url("Completion redirect must be a valid URL").optional(),
   termination_redirect: z.string().url("Termination redirect must be a valid URL").optional(),
+  unique_id: z.string().optional(),
 });
 
 const currencies = [
@@ -70,6 +72,8 @@ const currencies = [
 export default function SurveyForm({ isOpen, onClose, onSuccess }: SurveyFormProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("basic");
+  const [selectedClient, setSelectedClient] = useState<User | null>(null);
+  const queryClient = useQueryClient();
   
   // Fetch clients for dropdown
   const { data: clients = [] } = useQuery({
@@ -85,6 +89,37 @@ export default function SurveyForm({ isOpen, onClose, onSuccess }: SurveyFormPro
       }
     }
   });
+  
+  // Fetch existing surveys for the client to count them
+  const { data: existingSurveys = [] } = useQuery({
+    queryKey: ['/api/surveys', selectedClient?.id],
+    enabled: !!selectedClient,
+    queryFn: async () => {
+      if (!selectedClient) return [];
+      const response = await apiRequest('GET', `/api/surveys?client_id=${selectedClient.id}`);
+      if (Array.isArray(response)) {
+        return response;
+      } else {
+        return [];
+      }
+    }
+  });
+  
+  // Generate next unique ID for the survey
+  const generateUniqueId = (clientUniqueId: string, surveysCount: number) => {
+    if (!clientUniqueId) return "";
+    
+    // Logic to generate survey ID: clientID + letter (A, B, C, ...)
+    if (surveysCount < 26) {
+      // For first 26 surveys, use A through Z
+      return `${clientUniqueId}${String.fromCharCode(65 + surveysCount)}`;
+    } else {
+      // For surveys beyond 26, use AA, AB, AC, etc.
+      const firstChar = String.fromCharCode(65 + Math.floor(surveysCount / 26) - 1);
+      const secondChar = String.fromCharCode(65 + (surveysCount % 26));
+      return `${clientUniqueId}${firstChar}${secondChar}`;
+    }
+  };
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -104,16 +139,64 @@ export default function SurveyForm({ isOpen, onClose, onSuccess }: SurveyFormPro
       cpi: '',
       client_currency: 'USD',
       survey_link: '',
-      security_redirect: '',
-      quota_redirect: '',
-      completion_redirect: '',
-      termination_redirect: '',
+      main_market_link: '',
+      security_redirect: 'https://example.com/security-redirect',
+      quota_redirect: 'https://example.com/quota-full-redirect',
+      completion_redirect: 'https://example.com/completion-redirect',
+      termination_redirect: 'https://example.com/termination-redirect',
+      unique_id: '',
     }
   });
   
+  // Update redirects when client or survey link changes
+  useEffect(() => {
+    const clientId = form.watch('client_id');
+    const surveyLink = form.watch('survey_link');
+    
+    if (clientId) {
+      const client = clients.find(c => c.id === clientId);
+      if (client) {
+        setSelectedClient(client);
+        
+        // Update unique_id if client changes
+        const surveysForClient = existingSurveys.filter(s => s.client_id === clientId);
+        const newUniqueId = generateUniqueId(client.unique_id || '1112', surveysForClient.length);
+        form.setValue('unique_id', newUniqueId);
+        
+        // Generate main_market_link based on unique_id
+        if (newUniqueId) {
+          const baseUrl = window.location.origin;
+          form.setValue('main_market_link', `${baseUrl}/survey/verify/${newUniqueId}`);
+        }
+        
+        // Set default redirect URLs if they're empty
+        if (!form.watch('security_redirect')) {
+          form.setValue('security_redirect', 'https://example.com/security-redirect');
+        }
+        if (!form.watch('quota_redirect')) {
+          form.setValue('quota_redirect', 'https://example.com/quota-full-redirect');
+        }
+        if (!form.watch('completion_redirect')) {
+          form.setValue('completion_redirect', 'https://example.com/completion-redirect');
+        }
+        if (!form.watch('termination_redirect')) {
+          form.setValue('termination_redirect', 'https://example.com/termination-redirect');
+        }
+      }
+    }
+  }, [form.watch('client_id'), existingSurveys]);
+  
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await apiRequest('POST', '/api/surveys', values);
+      await apiRequest('POST', '/api/surveys', {
+        ...values,
+        // Ensure unique_id and main_market_link are included
+        unique_id: form.getValues('unique_id'),
+        main_market_link: form.getValues('main_market_link')
+      });
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/surveys'] });
       
       onSuccess();
       onClose();
@@ -442,6 +525,47 @@ export default function SurveyForm({ isOpen, onClose, onSuccess }: SurveyFormPro
                     </FormItem>
                   )}
                 />
+                
+                <FormField
+                  control={form.control}
+                  name="main_market_link"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Market Link (Auto-generated)</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Will be auto-generated" readOnly />
+                      </FormControl>
+                      <FormDescription>
+                        The verification link that vendors will use to access the survey (automatically generated)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="unique_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unique ID (Auto-generated)</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Will be auto-generated" readOnly />
+                      </FormControl>
+                      <FormDescription>
+                        Unique identifier for this survey (automatically generated)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="p-4 bg-gray-50 rounded-md mb-4">
+                  <h4 className="text-sm font-medium mb-2">Redirect URLs (Auto-generated)</h4>
+                  <p className="text-xs text-gray-500 mb-2">
+                    These URLs are automatically generated for you. You can customize them if needed.
+                  </p>
+                </div>
                 
                 <FormField
                   control={form.control}

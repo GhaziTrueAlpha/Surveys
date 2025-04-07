@@ -38,10 +38,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Refresh user data
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       
+      // Check if there's a pending survey verification
+      const pendingSurveyId = sessionStorage.getItem('pendingSurveyVerification');
+      
       // Handle redirects based on user role and approval status
       if (user) {
         if (user.flag === 'no') {
           navigate('/pending-approval');
+        } else if (pendingSurveyId && user.role === 'vendor') {
+          // Clear the stored survey ID
+          sessionStorage.removeItem('pendingSurveyVerification');
+          // Redirect to the verification page
+          navigate(`/survey/verify/${pendingSurveyId}`);
         } else {
           switch (user.role) {
             case 'admin':

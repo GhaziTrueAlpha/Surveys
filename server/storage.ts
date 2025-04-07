@@ -7,12 +7,14 @@ export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByUniqueId(uniqueId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User | undefined>;
   getUsers(role?: string, flag?: string): Promise<User[]>;
   
   // Survey operations
   getSurvey(id: string): Promise<Survey | undefined>;
+  getSurveyByUniqueId(uniqueId: string): Promise<Survey | undefined>;
   getSurveys(category?: string, createdBy?: string): Promise<Survey[]>;
   createSurvey(survey: InsertSurvey): Promise<Survey>;
   updateSurvey(id: string, data: Partial<Survey>): Promise<Survey | undefined>;
@@ -37,6 +39,11 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result[0];
+  }
+  
+  async getUserByUniqueId(uniqueId: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.unique_id, uniqueId)).limit(1);
     return result[0];
   }
 
@@ -76,6 +83,11 @@ export class DatabaseStorage implements IStorage {
   // Survey operations
   async getSurvey(id: string): Promise<Survey | undefined> {
     const result = await db.select().from(surveys).where(eq(surveys.id, id)).limit(1);
+    return result[0];
+  }
+  
+  async getSurveyByUniqueId(uniqueId: string): Promise<Survey | undefined> {
+    const result = await db.select().from(surveys).where(eq(surveys.unique_id, uniqueId)).limit(1);
     return result[0];
   }
 
